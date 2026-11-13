@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1d4ed8">
+  <title>ELMS &amp; TNPSC Practice</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="splash" class="splash" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <p id="splashMsg">Loading study bank…</p>
+  </div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="row-gap">
+        <button id="btnBrand" class="brand" type="button" aria-label="Go to Today home">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span>Study Bank</span>
+        </button>
+        <button id="btnSyncPill" class="chip sync-pill" type="button" title="Sync status (click for Settings)">Local</button>
+      </div>
+      <nav class="nav-tabs" aria-label="Main navigation">
+        <button class="nav-btn active" data-view="home" type="button">Today</button>
+        <button class="nav-btn" data-view="conflicts" type="button">Conflicts <span id="navConflictsBadge" class="pill-count"></span></button>
+        <button class="nav-btn" data-view="import" type="button">Import</button>
+        <button class="nav-btn" data-view="settings" type="button">Settings</button>
+      </nav>
+    </div>
+  </header>
+
+  <div id="toastBanner" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <main id="appMain" class="container">
+    <!-- HOME / TODAY -->
+    <section id="viewHome" class="view">
+      <div id="backupNudge" class="card continue-card hidden">
+        <div class="row-between">
+          <div class="small"><b>Backup reminder:</b> It has been over 7 days since your last backup.</div>
+          <button id="btnNudgeBackup" class="btn small primary" type="button">Backup now</button>
+        </div>
+      </div>
+      <div id="continueCard" class="card continue-card hidden">
+        <div class="row-between">
+          <div>
+            <div class="eyebrow">Resume session</div>
+            <div id="continueTitle" class="card-title"></div>
+            <div id="continueSub" class="muted small"></div>
+          </div>
+          <div class="row-gap">
+            <button id="btnDiscardSession" class="btn ghost small" type="button">Discard</button>
+            <button id="btnResumeSession" class="btn primary" type="button">Continue</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-strip card">
+        <div class="stat-box">
+          <div class="stat-val" id="statStreak">0d</div>
+          <div class="stat-lbl">Streak</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statToday">0 / 30</div>
+          <div class="stat-lbl">Today's goal</div>
+          <div class="mini-track" aria-hidden="true"><div id="goalBarFill" class="mini-fill"></div></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statDue">0</div>
+          <div class="stat-lbl">Due today</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statTotal">0</div>
+          <div class="stat-lbl">Questions</div>
+        </div>
+      </div>
+
+      <div class="quick-grid">
+        <button id="btnQuickDrill" class="quick-tile" type="button">
+          <span class="qt-title">10-min drill</span>
+          <span class="qt-sub">15 random unanswered Qs</span>
+        </button>
+        <button id="btnQuickDue" class="quick-tile" type="button">
+          <span class="qt-title">Due today</span>
+          <span class="qt-sub" id="lblDueSub">Spaced repetition</span>
+        </button>
+        <button id="btnQuickWrong" class="quick-tile" type="button">
+          <span class="qt-title">Revise wrong</span>
+          <span class="qt-sub" id="lblWrongSub">0 questions</span>
+        </button>
+        <button id="btnQuickMarked" class="quick-tile" type="button">
+          <span class="qt-title">Marked</span>
+          <span class="qt-sub" id="lblMarkedSub">0 bookmarked</span>
+        </button>
+      </div>
+
+      <section class="card" aria-labelledby="setupHeading">
+        <div class="row-between" style="margin-bottom:10px">
+          <h1 id="setupHeading" class="h2">Custom session</h1>
+          <span id="poolCountBadge" class="chip">0 matching</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label class="label" for="btnPickSubject">Subject &amp; topic</label>
+            <button id="btnPickSubject" class="picker-btn" type="button">
+              <span id="pickedScopeLabel">All subjects &amp; topics</span>
+              <span aria-hidden="true">▾</span>
+            </button>
+          </div>
+          <div class="field">
+            <label class="label" for="fSearch">Search text</label>
+            <input id="fSearch" class="input" type="search" placeholder="English or தமிழ் keywords…">
+          </div>
+        </div>
+
+        <div class="form-grid" style="margin-top:10px">
+          <div class="field">
+            <label class="label" for="fMode">Mode</label>
+            <select id="fMode" class="input">
+              <option value="practice">Practice (instant feedback)</option>
+              <option value="test">Timed Test (random sample)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label" for="fPool">Pool</label>
+            <select id="fPool" class="input">
+              <option value="all">All questions</option>
+              <option value="unseen">Unseen only</option>
+              <option value="wrong">Wrong answers</option>
+              <option value="marked">Marked for revision</option>
+              <option value="due">Leitner due today</option>
+              <option value="weak">Weakest topics</option>
+            </select>
+          </div>
+        </div>
+
+        <details class="adv-details">
+          <summary>Advanced options</summary>
+          <div class="adv-grid">
+            <label class="field">
+              <span class="label">Test question count (5–500)</span>
+              <input id="fCount" class="input" type="number" min="5" max="500" value="50">
+            </label>
+            <label class="field">
+              <span class="label">Negative marking</span>
+              <select id="fNegMark" class="input">
+                <option value="0.3333">1/3rd (−0.33 per wrong)</option>
+                <option value="0.25">1/4th (−0.25 per wrong)</option>
+                <option value="0">None (0)</option>
+              </select>
+            </label>
+            <label class="check-row"><input id="fShowTamil" type="checkbox" checked> Show Tamil (தமிழ்)</label>
+            <label class="check-row"><input id="fRandom" type="checkbox" checked> Shuffle order</label>
+            <label class="check-row"><input id="fAvoidDup" type="checkbox"> Avoid duplicates in session</label>
+          </div>
+        </details>
+
+        <div class="row-between" style="margin-top:14px">
+          <button id="btnResetFilters" class="btn ghost" type="button">Reset</button>
+          <button id="btnStart" class="btn primary" type="button">Start session</button>
+        </div>
+      </section>
+
+      <footer id="provenanceFooter" class="provenance card small muted"></footer>
+    </section>
+
+    <!-- PRACTICE / TEST VIEW -->
+    <section id="viewQuiz" class="view hidden" aria-label="Quiz session">
+      <div class="quiz-header card">
+        <div class="row-between">
+          <div class="row-gap">
+            <button id="btnQuitQuiz" class="btn ghost small" type="button">← Exit</button>
+            <span id="quizCounter" class="mono small">1 / 1</span>
+            <span id="quizScoreMini" class="chip small hidden"></span>
+          </div>
+          <div class="row-gap">
+            <span id="quizTimer" class="timer-pill hidden" aria-live="off">00:00</span>
+            <button id="btnPauseQuiz" class="btn ghost small hidden" type="button">Pause</button>
+            <button id="btnPalette" class="btn ghost small hidden" type="button">Palette</button>
+            <button id="btnToggleLangQ" class="btn ghost small" type="button" title="Toggle Tamil (T)">தமிழ்</button>
+            <button id="btnShortcuts" class="btn ghost small" type="button" title="Keyboard shortcuts (?)">?</button>
+          </div>
+        </div>
+        <div class="progress-track" aria-hidden="true"><div id="quizProgressFill" class="progress-fill"></div></div>
+        <div id="qMeta" class="chip-row"></div>
+      </div>
+
+      <article id="qCard" class="card q-card">
+        <div class="q-left">
+          <div id="qStem"></div>
+          <div id="qImgs" class="q-imgs"></div>
+        </div>
+        <div class="q-right">
+          <div id="qOpts" class="opts" role="group" aria-label="Answer options"></div>
+        <div id="qSubmitRow" class="row-end hidden" style="margin-top:10px">
+          <button id="btnSubmitQ" class="btn primary" type="button">Submit answer</button>
+        </div>
+        <div id="qVerdict" class="verdict hidden"></div>
+        <div id="qKeyActions" class="key-actions hidden"></div>
+        <details id="qExplWrap" class="expl-wrap hidden">
+          <summary>Explanation</summary>
+          <div id="qExpl" class="expl-body"></div>
+        </details>
+        <div id="qNoteBox" class="note-box hidden">
+          <label class="label" for="qNoteInput">Personal note</label>
+          <textarea id="qNoteInput" class="input" rows="2" placeholder="Add a mnemonic or note…"></textarea>
+          <div class="row-end" style="margin-top:6px">
+            <button id="btnSaveNote" class="btn primary small" type="button">Save note</button>
+          </div>
+        </div>
+        </div>
+      </article>
+
+      <div class="sticky-bar" role="toolbar" aria-label="Question navigation">
+        <button id="btnPrev" class="btn bar-btn" type="button">‹ Prev</button>
+        <button id="btnMark" class="btn bar-btn" type="button">☆ Mark</button>
+        <button id="btnNote" class="btn bar-btn" type="button">Note</button>
+        <button id="btnFinishTest" class="btn primary bar-btn hidden" type="button">Finish</button>
+        <button id="btnNext" class="btn primary bar-btn" type="button">Next ›</button>
+      </div>
+    </section>
+
+    <!-- RESULTS VIEW -->
+    <section id="viewResults" class="view hidden">
+      <div class="card">
+        <div class="row-between">
+          <h1 class="h2">Session Results</h1>
+          <button id="btnResHome" class="btn ghost small" type="button">Home</button>
+        </div>
+        <div class="stats-strip" style="margin-top:12px">
+          <div class="stat-box"><div class="stat-val" id="resScore">0</div><div class="stat-lbl">Score</div></div>
+          <div class="stat-box"><div class="stat-val" id="resAcc">0%</div><div class="stat-lbl">Accuracy</div></div>
+          <div class="stat-box"><div class="stat-val" id="resTime">0m</div><div class="stat-lbl">Time</div></div>
+          <div class="stat-box"><div class="stat-val" id="resRight">0/0</div><div class="stat-lbl">Correct</div></div>
+        </div>
+        <div class="row-gap" style="margin-top:12px;flex-wrap:wrap">
+          <button id="btnRetryWrong" class="btn primary" type="button">Retry wrong</button>
+          <button id="btnResDrillWeak" class="btn ghost" type="button">Drill weakest topics</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="h3">Weakest topics</h2>
+        <div id="resWeakTopics" class="list-stack"></div>
+      </div>
+
+      <div class="card">
+        <div class="row-between" style="margin-bottom:10px">
+          <h2 class="h3">Review questions</h2>
+          <div class="row-gap" role="group" aria-label="Filter reviewed questions">
+            <button class="chip-btn active" data-rfilter="all" type="button">All</button>
+            <button class="chip-btn" data-rfilter="wrong" type="button">Wrong</button>
+            <button class="chip-btn" data-rfilter="skipped" type="button">Skipped</button>
+            <button class="chip-btn" data-rfilter="marked" type="button">Marked</button>
+          </div>
+        </div>
+        <div id="resReviewList" class="list-stack"></div>
+      </div>
+    </section>
+
+    <!-- KEY CONFLICTS VIEW -->
+    <section id="viewConflicts" class="view hidden">
+      <div class="card">
+        <h1 class="h2">Key conflicts</h1>
+        <p class="muted small">When an incoming key disagrees with a website or user-verified key, both are preserved here for your decision.</p>
+        <div id="conflictsList" class="list-stack" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <!-- IMPORT QUESTION PACK VIEW -->
+    <section id="viewImport" class="view hidden">
+      <div class="card">
+        <h1 class="h2">Import question pack</h1>
+        <p class="muted small">Pick a JSON/JSONL file in your extraction format. Imported questions live in IndexedDB and survive app updates.</p>
+        <div class="form-grid" style="margin-top:10px">
+          <label class="field">
+            <span class="label">Question JSON file</span>
+            <input id="importFile" class="input" type="file" accept=".json,.jsonl">
+          </label>
+          <label class="field">
+            <span class="label">Batch label</span>
+            <input id="importBatch" class="input" type="text" placeholder="e.g. tnpsc_2026_11">
+          </label>
+          <label class="field">
+            <span class="label">Key source</span>
+            <select id="importKeySource" class="input">
+              <option value="website">website (published)</option>
+              <option value="ai-suggested">ai-suggested (unverified)</option>
+              <option value="user-verified">user-verified</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Duplicate rule</span>
+            <select id="importDupRule" class="input">
+              <option value="keep">Keep duplicates (tag FL_DUP)</option>
+              <option value="skip">Skip exact duplicates</option>
+            </select>
+          </label>
+        </div>
+        <div id="importPreview" class="list-card small hidden" style="margin-top:12px"></div>
+        <div class="row-end" style="margin-top:12px">
+          <button id="btnApplyImport" class="btn primary" type="button" disabled>Apply import</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SETTINGS VIEW -->
+    <section id="viewSettings" class="view hidden">
+      <div class="card">
+        <h1 class="h2">Settings</h1>
+        <div class="settings-list">
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Theme</div>
+              <div class="muted small">System follows your device dark mode</div>
+            </div>
+            <select id="setTheme" class="input" style="width:auto">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <label class="setting-row">
+            <div>
+              <div class="setting-title">Exclude AI-suggested keys from scored tests</div>
+              <div class="muted small">Recommended ON — prevents unverified AI keys from affecting test scores</div>
+            </div>
+            <input id="setExcludeAi" type="checkbox" checked>
+          </label>
+          <label class="setting-row">
+            <div>
+              <div class="setting-title">Practice: auto-advance on correct answer</div>
+              <div class="muted small">Smoothly moves to next question after 700 ms</div>
+            </div>
+            <input id="setAutoAdvance" type="checkbox">
+          </label>
+          <label class="setting-row">
+            <div>
+              <div class="setting-title">Practice: tap-then-submit</div>
+              <div class="muted small">Off = instant feedback on option tap</div>
+            </div>
+            <input id="setTapSubmit" type="checkbox">
+          </label>
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Daily question goal</div>
+              <div class="muted small">Target questions per day for streak tracking</div>
+            </div>
+            <input id="setDailyGoal" class="input" type="number" min="5" max="300" value="30" style="width:90px">
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="h3">Cross-Device Sync (GitHub Gist)</h2>
+        <p class="muted small">Token is stored on-device only (IndexedDB) and never placed in URLs, exports, or logs. Google Drive appDataFolder provider is stubbed for future OAuth.</p>
+        <div class="form-grid" style="margin-top:10px">
+          <label class="field">
+            <span class="label">GitHub Token (gist scope only)</span>
+            <input id="syncToken" class="input" type="password" placeholder="ghp_...">
+          </label>
+          <label class="field">
+            <span class="label">Private Gist ID (blank = auto-create)</span>
+            <input id="syncGistId" class="input" type="text" placeholder="Optional existing Gist ID">
+          </label>
+        </div>
+        <div class="row-between" style="margin-top:10px">
+          <span id="syncStatusText" class="muted small">Not synced yet</span>
+          <div class="row-gap">
+            <button id="btnSaveSync" class="btn ghost small" type="button">Save config</button>
+            <button id="btnSyncNow" class="btn primary small" type="button">Sync now</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="h3">Backup &amp; Restore</h2>
+        <div class="row-gap" style="margin-top:10px;flex-wrap:wrap">
+          <button id="btnExportJson" class="btn small" type="button">Export .json backup</button>
+          <label class="btn small" style="cursor:pointer">Import .json backup<input id="importBackupFile" type="file" accept=".json" class="hidden"></label>
+          <button id="btnGenCode" class="btn small" type="button">Copy backup code</button>
+          <button id="btnReqPersist" class="btn ghost small" type="button">Storage persist: check</button>
+        </div>
+        <div id="backupPreviewBox" class="list-card small hidden" style="margin-top:10px"></div>
+        <div class="field" style="margin-top:10px">
+          <label class="label" for="backupCodeInput">Compact backup code (ELMS1...)</label>
+          <div class="row-gap">
+            <input id="backupCodeInput" class="input" type="text" placeholder="Paste ELMS1... code to restore">
+            <button id="btnRestoreCode" class="btn small" type="button">Restore</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- SUBJECT / TOPIC BOTTOM SHEET -->
+  <div id="sheetOverlay" class="sheet-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet">
+      <div class="row-between" style="margin-bottom:8px">
+        <h2 id="sheetTitle" class="h3">Choose Subject / Topic</h2>
+        <button id="btnCloseSheet" class="btn ghost small" type="button">Close</button>
+      </div>
+      <input id="sheetSearch" class="input" type="search" placeholder="Filter subjects or topics…">
+      <div id="sheetBody" class="sheet-body"></div>
+    </div>
+  </div>
+
+  <!-- TEST PALETTE BOTTOM SHEET (500 Qs) -->
+  <div id="paletteOverlay" class="sheet-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="paletteTitle">
+    <div class="sheet">
+      <div class="row-between" style="margin-bottom:8px">
+        <h2 id="paletteTitle" class="h3">Question Palette</h2>
+        <button id="btnClosePalette" class="btn ghost small" type="button">Close</button>
+      </div>
+      <div id="paletteGrid" class="palette-grid"></div>
+    </div>
+  </div>
+
+  <!-- KEYBOARD SHORTCUTS MODAL -->
+  <div id="shortcutsOverlay" class="sheet-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+    <div class="sheet">
+      <div class="row-between" style="margin-bottom:10px">
+        <h2 id="shortcutsTitle" class="h3">Keyboard Shortcuts</h2>
+        <button id="btnCloseShortcuts" class="btn ghost small" type="button">Close</button>
+      </div>
+      <div class="shortcuts-grid small">
+        <div class="sc-row"><kbd>A</kbd>–<kbd>E</kbd> or <kbd>1</kbd>–<kbd>5</kbd><span>Select option</span></div>
+        <div class="sc-row"><kbd>Enter</kbd> / <kbd>Space</kbd><span>Submit or Next</span></div>
+        <div class="sc-row"><kbd>←</kbd> / <kbd>→</kbd> or <kbd>K</kbd> / <kbd>J</kbd><span>Prev / Next question</span></div>
+        <div class="sc-row"><kbd>M</kbd><span>Mark for revision</span></div>
+        <div class="sc-row"><kbd>N</kbd><span>Toggle &amp; focus Note</span></div>
+        <div class="sc-row"><kbd>E</kbd><span>Toggle Explanation</span></div>
+        <div class="sc-row"><kbd>T</kbd><span>Toggle Tamil (தமிழ்)</span></div>
+        <div class="sc-row"><kbd>G</kbd><span>Open Question Palette</span></div>
+        <div class="sc-row"><kbd>P</kbd><span>Pause / Resume Test</span></div>
+        <div class="sc-row"><kbd>?</kbd> / <kbd>Esc</kbd><span>Shortcuts / Close modal</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
